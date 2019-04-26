@@ -1,0 +1,3 @@
+#+title: FAIR method to identify mean motion resonances
+#+author: Thomas Rometsch
+
