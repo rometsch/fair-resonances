@@ -2,13 +2,29 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
+from matplotlib.patches import Rectangle
+from matplotlib.widgets import SpanSelector
+
 
 def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("outdir")
+    parser.add_argument("-r", "--resonance", default="2:1", help='type of the resonance, e.g. 3:2')
     args = parser.parse_args()
     outdir = args.outdir
+    # get the integer values from the resonance string
+    parts = args.resonance.split(":")
+    if not len(parts) == 2:
+        raise ValueError("Resonance argument must be of type 'p:q' but is '{}'".format(args.resonance))
+    try:
+        resonance_p = int(parts[0])
+        resonance_q = int(parts[1])
+    except ValueError:
+        raise ValueError("Resonance values must be integers, but given are '{}' and '{}'".format(parts[0], parts[1]))
+
+
+    # get planet data
 
     import reader_fargo
     rd = reader_fargo.Reader(outdir)
@@ -29,69 +45,137 @@ def main():
         p.l = p.M + p.omega_bar
         p.unify_length()
 
-
     p1 = planets[0]
     p2 = planets[1]
 
-    # p = 2
-    # q = 1
-    # theta1, theta2 = resonant_angle(1,1,p1.l, p2.l,
-    #                                 p1.omega_bar, p2.omega_bar)
-    # time = time.to(t0)
-
     plt.rcParams['figure.constrained_layout.use'] = True
     fig = plt.figure()
-    gs = fig.add_gridspec(6,4,figure=fig)
+    gs = fig.add_gridspec(8,4,figure=fig)
 
+    ax0 = fig.add_subplot(gs[0,:])
+    ax1 = fig.add_subplot(gs[1,:])
+    ax2 = fig.add_subplot(gs[2,:])
 
-    ax1 = fig.add_subplot(gs[0,:])
-    ax2 = fig.add_subplot(gs[1,:])
-
-    plot_semimajor_axis(ax1, p1, p2)
+    plot_semimajor_axis(ax0, p1, p2)
+    ax0.grid(alpha=0.3)
+    plot_period_ratio(ax1, p1, p2)
     ax1.grid(alpha=0.3)
-    plot_period_ratio(ax2, p1, p2)
-    ax2.grid(alpha=0.3)
 
-    axes = []
-    axes.append( fig.add_subplot(gs[2:4, 0:2]) )
-    axes.append( fig.add_subplot(gs[4:6, 0:2]) )
-    axes.append( fig.add_subplot(gs[2:4, 2:4]) )
-    axes.append( fig.add_subplot(gs[4:6, 2:4]) )
+    # plot resonant angles
+    theta1, theta2 = resonant_angle(resonance_p,resonance_q,p1.l, p2.l,
+                                    p1.omega_bar, p2.omega_bar)
+
+    ax2.plot(time, theta1, alpha=0.7)
+    ax2.plot(time, theta2, alpha=0.7)
+    ax2.set_ylabel("time")
+
+    fair_axes = []
+    fair_axes.append( fig.add_subplot(gs[3:5, 0:2]) )
+    fair_axes.append( fig.add_subplot(gs[3:5, 2:4]) )
+    fair_axes.append( fig.add_subplot(gs[5:7, 0:2]) )
+    fair_axes.append( fig.add_subplot(gs[5:7, 2:4]) )
 
     for n in range(4):
-        plot_fair(axes[n], n, p1, p2)
+        plot_fair(fair_axes[n], n, p1, p2)
 
-    from matplotlib.widgets import SpanSelector
-    # set useblit True on gtkagg for enhanced performance
-    for ax in [ax1, ax2]:
-        span = SpanSelector(ax,
-                            lambda xmin, xmax: onselect_fair_update(ax, axes, [p1,p2], xmin, xmax),
-                            'horizontal', useblit=True,
-                        rectprops=dict(alpha=0.5, facecolor=ax.get_lines()[-1].get_color()))
-        #ax.mpl_connect(lambda : [p.remove() for p in selector_ax.patches])
+    # global vars for selector
+    global select_axes
+    select_axes = []
+    select_axes.append(ax0)
+    select_axes.append(ax1)
+    select_axes.append(ax2)
+    global xlims
+    if hasattr(p1.time, "unit"):
+        xlims = [p1.time.value[0], p1.time.value[-1]]
+    else:
+        xlims = [p1.time[0], p1.time[-1]]
+    global rectangles_need_update
+    rectangles_need_update = False
+    # add hidden rectangles
+    xmin, xmax = xlims
+    color = ax1.get_lines()[0].get_color()
+    for ax in select_axes:
+        ymin, ymax = ax.get_ylim()
+        ax.add_patch( Rectangle( (xmin, ymin), xmax-xmin, ymax-ymin, color=color, alpha=0.3, visible=False ))
 
+    global spanselector
+    spanselector = None
+    global spanselector_defined_on
+    spanselector_defined_on = None
+    global mouse_pressed
+    mouse_pressed = False
+    def mouse_button_press(event):
+        global mouse_pressed
+        mouse_pressed = True
+
+    def mouse_button_release(event):
+        global mouse_pressed
+        mouse_pressed = False
+
+    def onselect_fair_update(xmin, xmax):
+        # get x values and ylimits
+        x = select_axes[-1].get_lines()[-1].get_xdata()
+        if hasattr(x, "unit"):
+            x = x.value
+        ymin, ymax = select_axes[-1].get_ylim()
+        # update global xmin, xmax
+        global xlims
+        xlims = [xmin, xmax]
+
+        # update fair plots
+        indmin, indmax = np.searchsorted(x, (xmin, xmax))
+        indmax = min(len(x) - 1, indmax)
+        for n in range(4):
+            fair_axes[n].clear()
+            plot_fair(fair_axes[n], n, planets[0], planets[1], inds=[indmin,indmax])
+        global rectangles_need_update
+        rectangles_need_update = True
+
+    def enter_axes(event):
+        # register a span selector when entering the axis
+        ax = event.inaxes
+        # remove all prior spanselectors
+        global spanselector
+        global spanselector_defined_on
+        if ax in select_axes and not mouse_pressed:
+            if spanselector is None or spanselector_defined_on != ax:
+                #if spanselector is not None:
+                #    spanselector.disconnect_events()
+                spanselector_defined_on = ax
+                color = select_axes[-1].get_lines()[-1].get_color()
+                del(spanselector)
+                spanselector = SpanSelector(ax,onselect_fair_update,
+                        'horizontal', useblit=True,
+                        rectprops=dict(alpha=0.3, facecolor=color))
+                ax.figure.canvas.draw()
+
+
+    def update_rectangles(event):
+        # only plot rectangle if user selected region
+        global rectangles_need_update
+        if not rectangles_need_update:
+            return
+        global xlims
+        global select_axes
+        xmin, xmax = xlims
+        for ax in select_axes:
+            p = ax.patches[0]
+            p.set_x(xmin)
+            p.set_width(xmax-xmin)
+            p.set_visible(True)
+            [p.remove() for p in ax.patches[1:]]
+        rectangles_need_update = False
+        ax.figure.canvas.draw()
+
+    # register some gui events
+    fig.canvas.mpl_connect('axes_enter_event', enter_axes)
+    fig.canvas.mpl_connect('button_press_event', mouse_button_press)
+    fig.canvas.mpl_connect('button_release_event', mouse_button_release)
+    fig.canvas.mpl_connect('draw_event', update_rectangles)
 
     plt.show()
 
-def onselect_fair_update(selector_ax, fair_axes, planets, xmin, xmax):
-    # get x values and ylimits
-    x = selector_ax.get_lines()[-1].get_xdata()
-    if hasattr(x, "unit"):
-        x = x.value
-    ymin, ymax = selector_ax.get_ylim()
-    # draw the rectangle
-    color = selector_ax.get_lines()[-1].get_color()
-    from matplotlib.patches import Rectangle
-    # remove old patches first
-    [p.remove() for p in selector_ax.patches]
-    selector_ax.add_patch( Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, facecolor = color, alpha=0.5))
-    # update fair plots
-    indmin, indmax = np.searchsorted(x, (xmin, xmax))
-    indmax = min(len(x) - 1, indmax)
-    for n in range(4):
-        fair_axes[n].clear()
-        plot_fair(fair_axes[n], n, planets[0], planets[1], inds=[indmin,indmax])
-    #fig.canvas.draw_idle()
+
 
 # plot semi-major axis
 def plot_semimajor_axis(ax, p1, p2):
