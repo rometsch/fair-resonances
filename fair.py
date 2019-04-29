@@ -18,8 +18,8 @@ def main():
     if not len(parts) == 2:
         raise ValueError("Resonance argument must be of type 'p:q' but is '{}'".format(args.resonance))
     try:
-        resonance_p = int(parts[0])
         resonance_q = int(parts[1])
+        resonance_p = int(parts[0]) - resonance_q
     except ValueError:
         raise ValueError("Resonance values must be integers, but given are '{}' and '{}'".format(parts[0], parts[1]))
 
