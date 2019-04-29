@@ -23,7 +23,6 @@ def main():
     except ValueError:
         raise ValueError("Resonance values must be integers, but given are '{}' and '{}'".format(parts[0], parts[1]))
 
-
     # get planet data
 
     import reader_fargo
@@ -50,40 +49,60 @@ def main():
 
     plt.rcParams['figure.constrained_layout.use'] = True
     fig = plt.figure()
-    gs = fig.add_gridspec(8,4,figure=fig)
+    #gs = fig.add_gridspec(8,4,figure=fig)
+    gs = fig.add_gridspec(6,3,figure=fig)
 
     ax0 = fig.add_subplot(gs[0,:])
     ax1 = fig.add_subplot(gs[1,:])
-    ax2 = fig.add_subplot(gs[2,:])
+    #ax2 = fig.add_subplot(gs[2,:])
 
     plot_semimajor_axis(ax0, p1, p2)
     ax0.grid(alpha=0.3)
     plot_period_ratio(ax1, p1, p2)
     ax1.grid(alpha=0.3)
 
-    # plot resonant angles
-    theta1, theta2 = resonant_angle(resonance_p,resonance_q,p1.l, p2.l,
-                                    p1.omega_bar, p2.omega_bar)
+    # # plot resonant angles
+    # theta1, theta2 = resonant_angle(resonance_p,resonance_q,p1.l, p2.l,
+    #                                p1.omega_bar, p2.omega_bar)
 
-    ax2.plot(time, theta1, alpha=0.7)
-    ax2.plot(time, theta2, alpha=0.7)
-    ax2.set_ylabel("time")
+    # ax2.plot(time, theta1, alpha=0.7)
+    # ax2.plot(time, theta2, alpha=0.7)
+    # ax2.set_xlabel("time")
+
+    # fair_axes = []
+    # fair_axes.append( fig.add_subplot(gs[2:4, 0:2]) )
+    # fair_axes.append( fig.add_subplot(gs[2:4, 2:4]) )
+    # fair_axes.append( fig.add_subplot(gs[5:7, 0:2]) )
+    # fair_axes.append( fig.add_subplot(gs[5:7, 2:4]) )
+    # ra_axes = [] # axes for resonant angles
+    # ra_axes.append( fig.add_subplot(gs[4, 0:2]) )
+    # ra_axes.append( fig.add_subplot(gs[4, 2:4]) )
+    # ra_axes.append( fig.add_subplot(gs[7, 0:2]) )
+    # ra_axes.append( fig.add_subplot(gs[7, 2:4]) )
 
     fair_axes = []
-    fair_axes.append( fig.add_subplot(gs[3:5, 0:2]) )
-    fair_axes.append( fig.add_subplot(gs[3:5, 2:4]) )
-    fair_axes.append( fig.add_subplot(gs[5:7, 0:2]) )
-    fair_axes.append( fig.add_subplot(gs[5:7, 2:4]) )
+    fair_axes.append( fig.add_subplot(gs[2, 0]) )
+    fair_axes.append( fig.add_subplot(gs[3, 0]) )
+    fair_axes.append( fig.add_subplot(gs[4, 0]) )
+    fair_axes.append( fig.add_subplot(gs[5, 0]) )
+    ra_axes = [] # axes for resonant angles
+    ra_axes.append( fig.add_subplot(gs[2, 1:]) )
+    ra_axes.append( fig.add_subplot(gs[3, 1:]) )
+    ra_axes.append( fig.add_subplot(gs[4, 1:]) )
+    ra_axes.append( fig.add_subplot(gs[5, 1:]) )
 
     for n in range(4):
         plot_fair(fair_axes[n], n, p1, p2)
+        plot_resonant_angles(ra_axes[n], n, p1, p2, resonance_p, resonance_q)
 
     # global vars for selector
     global select_axes
     select_axes = []
     select_axes.append(ax0)
     select_axes.append(ax1)
-    select_axes.append(ax2)
+    for ax in ra_axes:
+        select_axes.append(ax)
+    #select_axes.append(ax2)
     global xlims
     if hasattr(p1.time, "unit"):
         xlims = [p1.time.value[0], p1.time.value[-1]]
@@ -114,10 +133,11 @@ def main():
 
     def onselect_fair_update(xmin, xmax):
         # get x values and ylimits
-        x = select_axes[-1].get_lines()[-1].get_xdata()
+        ax = select_axes[0]
+        x = ax.get_lines()[-1].get_xdata()
         if hasattr(x, "unit"):
             x = x.value
-        ymin, ymax = select_axes[-1].get_ylim()
+        ymin, ymax = ax.get_ylim()
         # update global xmin, xmax
         global xlims
         xlims = [xmin, xmax]
@@ -128,6 +148,8 @@ def main():
         for n in range(4):
             fair_axes[n].clear()
             plot_fair(fair_axes[n], n, planets[0], planets[1], inds=[indmin,indmax])
+            ra_axes[n].clear()
+            plot_resonant_angles(ra_axes[n], n, p1, p2, resonance_p, resonance_q, inds=[indmin,indmax])
         global rectangles_need_update
         rectangles_need_update = True
 
@@ -147,6 +169,7 @@ def main():
                 spanselector = SpanSelector(ax,onselect_fair_update,
                         'horizontal', useblit=True,
                         rectprops=dict(alpha=0.3, facecolor=color))
+                #print("registered new span selector on", ax)
                 ax.figure.canvas.draw()
 
 
@@ -159,11 +182,14 @@ def main():
         global select_axes
         xmin, xmax = xlims
         for ax in select_axes:
-            p = ax.patches[0]
-            p.set_x(xmin)
-            p.set_width(xmax-xmin)
-            p.set_visible(True)
-            [p.remove() for p in ax.patches[1:]]
+            try:
+                p = ax.patches[0]
+                p.set_x(xmin)
+                p.set_width(xmax-xmin)
+                p.set_visible(True)
+                [p.remove() for p in ax.patches[1:]]
+            except IndexError:
+                pass
         rectangles_need_update = False
         ax.figure.canvas.draw()
 
@@ -196,9 +222,10 @@ def plot_period_ratio(ax, p1, p2):
     ax.set_ylabel("period ratio")
 
 # plot one of the 4 possible mmr fair plots
+# see table 1 in paper
 # to axis ax
 def plot_fair(ax, n, p1, p2, inds=None):
-    plot_kw = {"color" : "blue", "alpha" : 0.5 , "markeredgewidth" : 0.0, 'linestyle' : "", 'marker' :  '.'}
+    plot_kw = {"color" : "tab:blue", "alpha" : 0.5 , "markeredgewidth" : 0.0, 'linestyle' : "", 'marker' :  '.'}
     if inds is None:
         inds = [0, len(p1.time)]
     if n == 0:
@@ -207,30 +234,96 @@ def plot_fair(ax, n, p1, p2, inds=None):
         ax.plot(X, Y, '.', **plot_kw)
         ax.set_xlabel("M1")
         ax.set_ylabel("$\lambda_2 - \lambda_1$")
+        vert_count = "p+q"
+        hor_count = "q"
     elif n == 1:
         X = map_M(p2.M)[inds[0]:inds[1]]
         Y = map_lambda(p2.l, p1.l)[inds[0]:inds[1]]
         ax.plot(X, Y, '.', **plot_kw)
         ax.set_xlabel("M2")
         ax.set_ylabel("$\lambda_2 - \lambda_1$")
+        vert_count = "p"
+        hor_count = "q"
     elif n == 2:
         X = map_M(p1.M)[inds[0]:inds[1]]
         Y = map_lambda(p1.l, p2.l)[inds[0]:inds[1]]
         ax.plot(X, Y, '.', **plot_kw)
         ax.set_xlabel("M1")
         ax.set_ylabel("$\lambda_1 - \lambda_2$")
+        vert_count = "p"
+        hor_count = "q"
     elif n == 3:
         X = map_M(p2.M)[inds[0]:inds[1]]
         Y = map_lambda(p1.l, p2.l)[inds[0]:inds[1]]
         ax.plot(X, Y, '.', **plot_kw)
         ax.set_xlabel("M2")
         ax.set_ylabel("$\lambda_1 - \lambda_2$")
+        vert_count = "p+q"
+        hor_count = "q"
     else:
         raise ValueError("plot type n has to be 0,1,2 or 3")
 
     ax.set_xlim([0,360])
     ax.set_ylim([0,360])
     ax.set_aspect('equal')
+    # add the number of counts as extra labels
+    # ax2 = ax.twiny()
+    # ax2.set_xlim( ax.get_xlim() )
+    # ax2.set_xlabel( hor_count )
+    # ax3 = ax.twinx()
+    # ax3.set_ylim( ax.get_ylim() )
+    # ax3.set_ylabel( vert_count )
+
+# plot one of the 4 possible mmr fair plots
+# to axis ax
+def plot_resonant_angles(ax, n, p1, p2, p, q, inds=None):
+    plot_kw = {"color" : "tab:blue", "alpha" : 1.0 , "markersize" : 2.0 ,"markeredgewidth" : 0.0, 'linestyle' : "", 'marker' :  '.'}
+    if inds is None:
+        inds = [0, len(p1.time)]
+        #inds = slice(0,len(p1.time))
+    if n == 0:
+        ra = resonant_angle(p, q, p1.l, p2.l, p1.omega_bar, p2.omega_bar)[0]
+        plot_select_index(ax, p1.time, ra, inds, **plot_kw)
+        ax.set_xlabel("time")
+        ax.set_ylabel("$(p+q)\lambda_1 -p\lambda - q \bar{\omega}$")
+    elif n == 1:
+        ra = resonant_angle(p, q, p1.l, p2.l, p1.omega_bar, p2.omega_bar)[1]
+        plot_select_index(ax, p1.time, ra, inds, **plot_kw)
+        ax.set_xlabel("time")
+        ax.set_ylabel("$\lambda_2 - \lambda_1$")
+    elif n == 2:
+        ra = resonant_angle(p, q, p2.l, p1.l, p2.omega_bar, p1.omega_bar)[1]
+        plot_select_index(ax, p1.time, ra, inds, **plot_kw)
+        ax.set_xlabel("time")
+        ax.set_ylabel("$\lambda_1 - \lambda_2$")
+    elif n == 3:
+        ra = resonant_angle(p, q, p2.l, p1.l, p2.omega_bar, p1.omega_bar)[0]
+        plot_select_index(ax, p1.time, ra, inds, **plot_kw)
+        ax.set_xlabel("time")
+        ax.set_ylabel("$\lambda_1 - \lambda_2$")
+    else:
+        raise ValueError("plot type n has to be 0,1,2 or 3")
+
+    ax.set_ylim(0, 360)
+    ax.set_xlim(p1.time[inds[0]].value, p1.time[inds[1]-1].value)
+
+def plot_select_index(ax, x, y, indminmax, *args, **kwargs):
+    x = x[indminmax[0] : indminmax[1]]
+    y = y[indminmax[0] : indminmax[1]]
+    ax.plot(x, y, *args, **kwargs)
+
+# calculate resonant angles for mean 2:1 motion resonance (p=1, q=1)
+# formula taken from Forg´acs-Dajka et al 2018
+# "A fast method to identify mean motion resonances"
+def resonant_angle(p, q, l1, l2, omega_bar1, omega_bar2):
+    return ( (((p+q)*l2 - p*l1 - q*omega_bar1)/np.pi*180)%360 ,
+             (((p+q)*l2 - p*l1 - q*omega_bar2)/np.pi*180)%360 )
+
+# FAIR plot
+def map_M(M):
+    return (M/np.pi*180)%360
+def map_lambda(l1, l2):
+    return ((l2 - l1)/np.pi*180)%360
 
 class Planet:
     def __init__(self, time=None, a=None, Omega=None, omega=None, M=None, omega_bar=None, l=None):
@@ -268,19 +361,6 @@ class Planet:
         for var in ['a','Omega','omega','M','omega_bar','l']:
             if len(self.__dict__[var]) > N:
                 self.__dict__[var] = self.__dict__[var][:N]
-
-# calculate resonant angles for mean 2:1 motion resonance (p=1, q=1)
-# formula taken from Forg´acs-Dajka et al 2018
-# "A fast method to identify mean motion resonances"
-def resonant_angle(p, q, l1, l2, omega_bar1, omega_bar2):
-    return ( (((p+q)*l2 - p*l1 - q*omega_bar1)/np.pi*180)%360 ,
-             (((p+q)*l2 - p*l1 - q*omega_bar2)/np.pi*180)%360 )
-
-# FAIR plot
-def map_M(M):
-    return (M/np.pi*180)%360
-def map_lambda(l1, l2):
-    return ((l2 - l1)/np.pi*180)%360
 
 def smooth(x, y, algo="savgol", window_length=51, s=1.3):
     from scipy import interpolate
