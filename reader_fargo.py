@@ -241,7 +241,7 @@ def loadScalar(filepath, varname):
                 found_variables[name] = [col, unitstr]
     # get data
     col = found_variables[varname][0]
-    unit = u.Unit(found_variables[varname][1])
+    unit = u.Unit(u.Quantity(found_variables[varname][1]))
     data = np.genfromtxt(filepath, usecols=int(col))*unit
     # get time
     timename = "physical time"
@@ -289,7 +289,7 @@ class Reader:
         self.r, self.dr = loadRadius(self.dataDir, self.units['length'])
         self.Phi, self.R = loadMeshGridPolar(dataDir, self.units['length'])
 
-    def getScalar(self, key, n="", varDict = scalarVars, frame=None):
+    def getScalar(self, key, n="", varDict = scalarVars, frame=None, nounit=False):
         oldkey = key
         if key in aliases:
             key = aliases[key]
@@ -304,11 +304,14 @@ class Reader:
             tframe = self.outputTimes[frame]
             ind = np.argmin( np.abs(t - tframe))
             return (t[ind],v[ind])
+        if hasattr(v, "unit") and nounit:
+            v = v.value
+            t = t.value
         return (t,v)
 
-    def getScalarPlanet(self, key, n, frame=None):
+    def getScalarPlanet(self, key, n, frame=None, nounit=False):
         offset = scalarVarsPlanet[key]['offset']
-        return self.getScalar(key, n=n+offset, varDict=scalarVarsPlanet, frame=frame)
+        return self.getScalar(key, n=n+offset, varDict=scalarVarsPlanet, frame=frame, nounit=nounit)
 
     def get1D(self, key, unit=None):
         # return a TimeSeries1D object which can be indexed via the [] operator
