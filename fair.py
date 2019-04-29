@@ -30,17 +30,17 @@ def main():
 
     planets = [Planet(), Planet()]
     for n,p in zip([1,2], planets):
-        time, val = rd.getScalarPlanet('a', n)
+        time, val = rd.getScalarPlanet('a', n, nounit=True)
         p.set('a', time, val)
-        time, val = rd.getScalarPlanet('ascendingnode', n)
+        time, val = rd.getScalarPlanet('ascendingnode', n, nounit=True)
         p.set('Omega', time, val, tomap=True)
-        time, val = rd.getScalarPlanet('omega', n)
+        time, val = rd.getScalarPlanet('omega', n, nounit=True)
         p.set('omega', time, val, tomap=True)
-        time, val = rd.getScalarPlanet('meananomaly', n)
+        time, val = rd.getScalarPlanet('meananomaly', n, nounit=True)
         p.set('M', time, val, tomap=True)
-        time, val = rd.getScalarPlanet('perihelionpositionangle', n)
+        #time, val = rd.getScalarPlanet('perihelionpositionangle', n, nounit=True)
+        val = p.omega+p.Omega
         p.set('omega_bar', time, val)
-        #p.omega_bar = p.omega+p.Omega
         p.l = p.M + p.omega_bar
         p.unify_length()
 
@@ -94,6 +94,8 @@ def main():
     for n in range(4):
         plot_fair(fair_axes[n], n, p1, p2)
         plot_resonant_angles(ra_axes[n], n, p1, p2, resonance_p, resonance_q)
+
+    fig.suptitle("FAIR resonance plots with p:q = {}:{}".format(resonance_p, resonance_q))
 
     # global vars for selector
     global select_axes
@@ -263,8 +265,8 @@ def plot_fair(ax, n, p1, p2, inds=None):
     else:
         raise ValueError("plot type n has to be 0,1,2 or 3")
 
-    ax.set_xlim([0,360])
-    ax.set_ylim([0,360])
+    #ax.set_xlim([0,2*np.pi])
+    #ax.set_ylim([0,2*np.pi])
     ax.set_aspect('equal')
     # add the number of counts as extra labels
     # ax2 = ax.twiny()
@@ -304,7 +306,7 @@ def plot_resonant_angles(ax, n, p1, p2, p, q, inds=None):
     else:
         raise ValueError("plot type n has to be 0,1,2 or 3")
 
-    ax.set_ylim(0, 360)
+    #ax.set_ylim(0, 360)
     ax.set_xlim(p1.time[inds[0]].value, p1.time[inds[1]-1].value)
 
 def plot_select_index(ax, x, y, indminmax, *args, **kwargs):
@@ -316,14 +318,14 @@ def plot_select_index(ax, x, y, indminmax, *args, **kwargs):
 # formula taken from Forg´acs-Dajka et al 2018
 # "A fast method to identify mean motion resonances"
 def resonant_angle(p, q, l1, l2, omega_bar1, omega_bar2):
-    return ( (((p+q)*l2 - p*l1 - q*omega_bar1)/np.pi*180)%360 ,
-             (((p+q)*l2 - p*l1 - q*omega_bar2)/np.pi*180)%360 )
+    return ( ((p+q)*l2 - p*l1 - q*omega_bar1)%(2*np.pi) ,
+             ((p+q)*l2 - p*l1 - q*omega_bar2)%(2*np.pi)  )
 
 # FAIR plot
 def map_M(M):
-    return (M/np.pi*180)%360
+    return M
 def map_lambda(l1, l2):
-    return ((l2 - l1)/np.pi*180)%360
+    return (l2 - l1)%(2*np.pi)
 
 class Planet:
     def __init__(self, time=None, a=None, Omega=None, omega=None, M=None, omega_bar=None, l=None):
