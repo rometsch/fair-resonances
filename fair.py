@@ -235,33 +235,33 @@ def plot_fair(ax, n, p1, p2, inds=None):
         Y = map_lambda(p2.l, p1.l)[inds[0]:inds[1]]
         ax.plot(X, Y, '.', **plot_kw)
         ax.set_xlabel("M1")
-        ax.set_ylabel("$\lambda_2 - \lambda_1$")
         vert_count = "p+q"
         hor_count = "q"
+        ax.set_ylabel("Inner (count {})\n$\lambda_2 - \lambda_1$".format(vert_count))
     elif n == 1:
         X = map_M(p2.M)[inds[0]:inds[1]]
         Y = map_lambda(p2.l, p1.l)[inds[0]:inds[1]]
         ax.plot(X, Y, '.', **plot_kw)
         ax.set_xlabel("M2")
-        ax.set_ylabel("$\lambda_2 - \lambda_1$")
         vert_count = "p"
         hor_count = "q"
+        ax.set_ylabel("Inner (count {})\n$\lambda_2 - \lambda_1$".format(vert_count))
     elif n == 2:
         X = map_M(p1.M)[inds[0]:inds[1]]
         Y = map_lambda(p1.l, p2.l)[inds[0]:inds[1]]
         ax.plot(X, Y, '.', **plot_kw)
         ax.set_xlabel("M1")
-        ax.set_ylabel("$\lambda_1 - \lambda_2$")
         vert_count = "p"
         hor_count = "q"
+        ax.set_ylabel("Inner (count {})\n$\lambda_1 - \lambda_2$".format(vert_count))
     elif n == 3:
         X = map_M(p2.M)[inds[0]:inds[1]]
         Y = map_lambda(p1.l, p2.l)[inds[0]:inds[1]]
         ax.plot(X, Y, '.', **plot_kw)
         ax.set_xlabel("M2")
-        ax.set_ylabel("$\lambda_1 - \lambda_2$")
         vert_count = "p+q"
         hor_count = "q"
+        ax.set_ylabel("Inner (count {})\n$\lambda_1 - \lambda_2$".format(vert_count))
     else:
         raise ValueError("plot type n has to be 0,1,2 or 3")
 
@@ -287,22 +287,22 @@ def plot_resonant_angles(ax, n, p1, p2, p, q, inds=None):
         ra = resonant_angle(p, q, p1.l, p2.l, p1.omega_bar, p2.omega_bar)[0]
         plot_select_index(ax, p1.time, ra, inds, **plot_kw)
         ax.set_xlabel("time")
-        ax.set_ylabel("$(p+q)\lambda_1 -p\lambda - q \bar{\omega}$")
+        ax.set_ylabel("$(p+q)\lambda_2 -p\lambda_1 - q (\omega_1+\Omega_1)$")
     elif n == 1:
         ra = resonant_angle(p, q, p1.l, p2.l, p1.omega_bar, p2.omega_bar)[1]
         plot_select_index(ax, p1.time, ra, inds, **plot_kw)
         ax.set_xlabel("time")
-        ax.set_ylabel("$\lambda_2 - \lambda_1$")
+        ax.set_ylabel("$(p+q)\lambda_2 -p\lambda_1 - q (\omega_2+\Omega_2)$")
     elif n == 2:
         ra = resonant_angle(p, q, p2.l, p1.l, p2.omega_bar, p1.omega_bar)[1]
         plot_select_index(ax, p1.time, ra, inds, **plot_kw)
         ax.set_xlabel("time")
-        ax.set_ylabel("$\lambda_1 - \lambda_2$")
+        ax.set_ylabel("$(p+q)\lambda_1 -p\lambda_2 - q (\omega_1+\Omega_1)$")
     elif n == 3:
         ra = resonant_angle(p, q, p2.l, p1.l, p2.omega_bar, p1.omega_bar)[0]
         plot_select_index(ax, p1.time, ra, inds, **plot_kw)
         ax.set_xlabel("time")
-        ax.set_ylabel("$\lambda_1 - \lambda_2$")
+        ax.set_ylabel("$(p+q)\lambda_1 -p\lambda_2 - q (\omega_2+\Omega_2)$")
     else:
         raise ValueError("plot type n has to be 0,1,2 or 3")
 
