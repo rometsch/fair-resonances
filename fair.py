@@ -95,7 +95,7 @@ def main():
         plot_fair(fair_axes[n], n, p1, p2)
         plot_resonant_angles(ra_axes[n], n, p1, p2, resonance_p, resonance_q)
 
-    fig.suptitle("FAIR resonance plots with p:q = {}:{}".format(resonance_p, resonance_q))
+    fig.suptitle("FAIR method for {}:{} eccentricity type MMR resonance with p,q = {},{}".format(resonance_p+resonance_q, resonance_p, resonance_p, resonance_q))
 
     # global vars for selector
     global select_axes
