@@ -1,3 +1,6 @@
 #+title: FAIR method to identify mean motion resonances
 #+author: Thomas Rometsch
 
+Python implementation of the FAIR method to identify resonances presented in [[https://doi.org/10.1093/mnras/sty641][Forgacs-Dajka et. al. 2018]].
+
+
