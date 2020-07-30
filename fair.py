@@ -1,18 +1,45 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 from matplotlib.patches import Rectangle
 from matplotlib.widgets import SpanSelector
 
+from simdata import SData
+
+def planet_from_simdata(simid, p1=1, p2=2):
+    data = SData(simid)
+    
+    time_unit = "kyr"
+    
+    planets = [Planet(), Planet()]
+    for pdata,p in zip([data.planets[p1],data.planets[p2]], planets):
+        a = pdata.get("semi-major axis")
+        time = a.time.to("kyr")
+        p.set('a', time, a.data.to("au"))
+        # 2D, thus set ascending node to 0
+        Omega = np.zeros(len(a.time))
+        p.set('Omega', time, Omega, tomap=True)
+        omega = pdata.get("pericenter angle")
+        p.set('omega', time, omega.data, tomap=True)
+        M = pdata.get("mean anomaly")
+        p.set('M', time, M.data, tomap=True)
+        val = p.omega+p.Omega
+        p.set('omega_bar', time, val)
+        p.l = p.M + p.omega_bar
+        p.unify_length()
+    
+    return planets
 
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("outdir")
-    parser.add_argument("-r", "--resonance", default="2:1", help='type of the resonance, e.g. 3:2')
+    parser.add_argument("simid")
+    # parser.add_argument("outdir")
+    parser.add_argument("-r", "--resonance", default="2:1", help="Type of the resonance, default is 3:2")
+    parser.add_argument("-p", "--planets", type=int, nargs=2, default=[1,2], help="Indices of planets in data.")
     args = parser.parse_args()
-    outdir = args.outdir
+
     # get the integer values from the resonance string
     parts = args.resonance.split(":")
     if not len(parts) == 2:
@@ -25,27 +52,8 @@ def main():
 
     # get planet data
 
-    import reader_fargo
-    rd = reader_fargo.Reader(outdir)
-
-    planets = [Planet(), Planet()]
-    for n,p in zip([1,2], planets):
-        time, val = rd.getScalarPlanet('a', n, nounit=True)
-        p.set('a', time, val)
-        time, val = rd.getScalarPlanet('ascendingnode', n, nounit=True)
-        p.set('Omega', time, val, tomap=True)
-        time, val = rd.getScalarPlanet('omega', n, nounit=True)
-        p.set('omega', time, val, tomap=True)
-        time, val = rd.getScalarPlanet('meananomaly', n, nounit=True)
-        p.set('M', time, val, tomap=True)
-        #time, val = rd.getScalarPlanet('perihelionpositionangle', n, nounit=True)
-        val = p.omega+p.Omega
-        p.set('omega_bar', time, val)
-        p.l = p.M + p.omega_bar
-        p.unify_length()
-
-    p1 = planets[0]
-    p2 = planets[1]
+    planets = planet_from_simdata(args.simid, p1=args.planets[0], p2=args.planets[1])
+    p1, p2 = planets
 
     plt.rcParams['figure.constrained_layout.use'] = True
     fig = plt.figure()
