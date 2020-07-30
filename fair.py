@@ -36,17 +36,17 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("simid")
     # parser.add_argument("outdir")
-    parser.add_argument("-r", "--resonance", default="2:1", help="Type of the resonance, default is 3:2")
+    parser.add_argument("-r", "--resonance", default="2:1", help="Type of the resonance, default is 2:1")
     parser.add_argument("-p", "--planets", type=int, nargs=2, default=[1,2], help="Indices of planets in data.")
     args = parser.parse_args()
 
     # get the integer values from the resonance string
     parts = args.resonance.split(":")
     if not len(parts) == 2:
-        raise ValueError("Resonance argument must be of type 'p:q' but is '{}'".format(args.resonance))
+        raise ValueError("Resonance argument must be of type 'p+q:p' but is '{}'".format(args.resonance))
     try:
-        resonance_q = int(parts[1])
-        resonance_p = int(parts[0]) - resonance_q
+        resonance_p = int(parts[1])
+        resonance_q = int(parts[0]) - resonance_p
     except ValueError:
         raise ValueError("Resonance values must be integers, but given are '{}' and '{}'".format(parts[0], parts[1]))
 
@@ -242,10 +242,11 @@ def plot_fair(ax, n, p1, p2, inds=None):
         X = map_M(p1.M)[inds[0]:inds[1]]
         Y = map_lambda(p2.l, p1.l)[inds[0]:inds[1]]
         ax.plot(X, Y, '.', **plot_kw)
-        ax.set_xlabel("M1")
         vert_count = "p+q"
         hor_count = "q"
+        ax.set_xlabel("M1")
         ax.set_ylabel("Inner (count {})\n$\lambda_2 - \lambda_1$".format(vert_count))
+        ax.set_title("count q")
     elif n == 1:
         X = map_M(p2.M)[inds[0]:inds[1]]
         Y = map_lambda(p2.l, p1.l)[inds[0]:inds[1]]
