@@ -5,10 +5,14 @@ import argparse
 from matplotlib.patches import Rectangle
 from matplotlib.widgets import SpanSelector
 
-from simdata import SData
+from disgrid import Data
+
+spanselector = None
+spanselector_defined_on = None
+mouse_pressed = False
 
 def planet_from_simdata(simid, p1=1, p2=2):
-    data = SData(simid)
+    data = Data(simid)
     
     time_unit = "kyr"
     
@@ -127,12 +131,7 @@ def main():
         ymin, ymax = ax.get_ylim()
         ax.add_patch( Rectangle( (xmin, ymin), xmax-xmin, ymax-ymin, color=color, alpha=0.3, visible=False ))
 
-    global spanselector
-    spanselector = None
-    global spanselector_defined_on
-    spanselector_defined_on = None
-    global mouse_pressed
-    mouse_pressed = False
+   
     def mouse_button_press(event):
         global mouse_pressed
         mouse_pressed = True
@@ -178,7 +177,7 @@ def main():
                 del(spanselector)
                 spanselector = SpanSelector(ax,onselect_fair_update,
                         'horizontal', useblit=True,
-                        rectprops=dict(alpha=0.3, facecolor=color))
+                        props=dict(alpha=0.3, facecolor=color))
                 #print("registered new span selector on", ax)
                 ax.figure.canvas.draw()
 
@@ -262,7 +261,7 @@ def plot_fair(ax, n, p1, p2, inds=None):
         ax.set_xlabel("M1")
         vert_count = "p"
         hor_count = "q"
-        ax.set_ylabel("Inner (count {})\n$\lambda_1 - \lambda_2$".format(vert_count))
+        ax.set_ylabel("Outer (count {})\n$\lambda_1 - \lambda_2$".format(vert_count))
     elif n == 3:
         X = map_M(p2.M)[inds[0]:inds[1]]
         Y = map_lambda(p1.l, p2.l)[inds[0]:inds[1]]
@@ -270,7 +269,7 @@ def plot_fair(ax, n, p1, p2, inds=None):
         ax.set_xlabel("M2")
         vert_count = "p+q"
         hor_count = "q"
-        ax.set_ylabel("Inner (count {})\n$\lambda_1 - \lambda_2$".format(vert_count))
+        ax.set_ylabel("Outer (count {})\n$\lambda_1 - \lambda_2$".format(vert_count))
     else:
         raise ValueError("plot type n has to be 0,1,2 or 3")
 
